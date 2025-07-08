@@ -1,14 +1,77 @@
 import React, { useState } from 'react';
-import { Upload, FileText, AlertCircle, Check } from 'lucide-react'; // Removed X as it wasn't used
+import { Upload, FileText, AlertCircle, Check } from 'lucide-react';
+
+// Definir interfaces para os tipos de registros
+interface Record000 {
+  type: 'UNB - Cabeçalho de Intercâmbio';
+  identificador: string;
+  remetente: string;
+  destinatario: string;
+  data: string;
+  hora: string;
+  identificacaoIntercambio: string;
+  filler: string;
+}
+
+interface Record340 {
+  type: 'UNH - Cabeçalho de Documento';
+  identificador: string;
+  identificacaoDocumento: string;
+  filler: string;
+}
+
+interface Record341 {
+  type: 'TRA - Dados da Transportadora';
+  identificador: string;
+  cgc: string;
+  razaoSocial: string;
+  filler: string;
+}
+
+interface Record342 {
+  type: 'OEN - Ocorrência na Entrega';
+  identificador: string;
+  cgcEmpresaEmissora: string;
+  serieNotaFiscal: string;
+  numeroNotaFiscal: string;
+  codigoOcorrencia: string;
+  descricaoOcorrencia: string;
+  dataOcorrencia: string;
+  horaOcorrencia: string;
+  codigoObservacao: string;
+  descricaoObservacao: string;
+  textoLivre: string;
+  filler: string;
+}
+
+interface Record343 {
+  type: 'OEN - Redespacho';
+  identificador: string;
+  cgcEmpresaContratante: string;
+  filialEmissora: string;
+  serieConhecimento: string;
+  numeroConhecimento: string;
+  filler: string;
+}
+
+// Tipo união para todos os registros reconhecidos
+type ParsedRecord = Record000 | Record340 | Record341 | Record342 | Record343 | {
+  type: string;
+  identificador: string;
+  linha?: string;
+  erro?: string;
+};
 
 const OcorenParser = () => {
-  const [file, setFile] = useState(null);
-  const [parsedData, setParsedData] = useState(null);
-  const [error, setError] = useState(null);
+  // Use 'File | null' para o estado do arquivo
+  const [file, setFile] = useState<File | null>(null);
+  // Use 'ParsedRecord[] | null' para os dados parseados
+  const [parsedData, setParsedData] = useState<ParsedRecord[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Códigos de ocorrência conforme documentação
-  const occurrenceCodes = {
+  const occurrenceCodes: { [key: string]: string } = {
     '09': 'Cancelado',
     '10': 'Processo de transporte já iniciado/carga coletada',
     '11': 'Reentrega solicitada pelo cliente',
@@ -79,13 +142,14 @@ const OcorenParser = () => {
     '99': 'Outros tipos de ocorrências não especificados acima'
   };
 
-  const observationCodes = {
+  const observationCodes: { [key: string]: string } = {
     '01': 'Devolução/recusa total',
     '02': 'Devolução/recusa parcial',
     '03': 'Aceite/entrega por acordo'
   };
 
-  const parseRecord000 = (line) => {
+  // Funções de parsing com tipagem explícita para 'line' e retorno
+  const parseRecord000 = (line: string): Record000 => {
     return {
       type: 'UNB - Cabeçalho de Intercâmbio',
       identificador: line.substring(0, 3),
@@ -98,7 +162,7 @@ const OcorenParser = () => {
     };
   };
 
-  const parseRecord340 = (line) => {
+  const parseRecord340 = (line: string): Record340 => {
     return {
       type: 'UNH - Cabeçalho de Documento',
       identificador: line.substring(0, 3),
@@ -107,7 +171,7 @@ const OcorenParser = () => {
     };
   };
 
-  const parseRecord341 = (line) => {
+  const parseRecord341 = (line: string): Record341 => {
     return {
       type: 'TRA - Dados da Transportadora',
       identificador: line.substring(0, 3),
@@ -117,7 +181,7 @@ const OcorenParser = () => {
     };
   };
 
-  const parseRecord342 = (line) => {
+  const parseRecord342 = (line: string): Record342 => {
     const occurrenceCode = line.substring(28, 30);
     const observationCode = line.substring(42, 44);
     
@@ -138,7 +202,7 @@ const OcorenParser = () => {
     };
   };
 
-  const parseRecord343 = (line) => {
+  const parseRecord343 = (line: string): Record343 => {
     return {
       type: 'OEN - Redespacho',
       identificador: line.substring(0, 3),
@@ -150,9 +214,9 @@ const OcorenParser = () => {
     };
   };
 
-  const parseOcorenFile = (content) => {
+  const parseOcorenFile = (content: string): ParsedRecord[] => {
     const lines = content.split('\n').filter(line => line.trim());
-    const parsedRecords = [];
+    const parsedRecords: ParsedRecord[] = [];
 
     for (const line of lines) {
       if (line.length < 120) continue;
@@ -183,7 +247,7 @@ const OcorenParser = () => {
               linha: line
             });
         }
-      } catch (err: any) { // Explicitly type err as any
+      } catch (err: unknown) {
         parsedRecords.push({
           type: 'Erro ao processar',
           identificador: recordType,
@@ -196,8 +260,8 @@ const OcorenParser = () => {
     return parsedRecords;
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => { // Explicitly type event
-    const uploadedFile = event.target.files?.[0]; // Use optional chaining
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = event.target.files?.[0];
     if (!uploadedFile) return;
 
     setFile(uploadedFile);
@@ -208,24 +272,24 @@ const OcorenParser = () => {
       const content = await uploadedFile.text();
       const parsed = parseOcorenFile(content);
       setParsedData(parsed);
-    } catch (err: any) { // Explicitly type err as any
+    } catch (err: unknown) {
       setError('Erro ao processar arquivo: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (dateStr: string) => { // Explicitly type dateStr
+  const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr.length !== 8) return dateStr;
     return `${dateStr.substring(0, 2)}/${dateStr.substring(2, 4)}/${dateStr.substring(4, 8)}`;
   };
 
-  const formatTime = (timeStr: string) => { // Explicitly type timeStr
+  const formatTime = (timeStr: string) => {
     if (!timeStr || timeStr.length !== 4) return timeStr;
     return `${timeStr.substring(0, 2)}:${timeStr.substring(2, 4)}`;
   };
 
-  const getStatusClass = (type: string) => { // Renamed from getStatusColor to getStatusClass for CSS classes
+  const getStatusClass = (type: string) => {
     switch (type) {
       case 'UNB - Cabeçalho de Intercâmbio':
         return 'status-unb';
@@ -247,12 +311,12 @@ const OcorenParser = () => {
       <div className="ocoren-parser-content">
         <div className="ocoren-parser-header">
           <FileText className="ocoren-parser-icon" />
-          <h1 className="ocoren-parser-title">Validador de Arquivos OCOREN</h1>
+          <h1 className="ocoren-parser-title">Validaro Intelipost de Arquivos OCOREN</h1>
         </div>
 
         <div className="ocoren-parser-upload-section">
           <label className="ocoren-parser-label">
-            Selecione o arquivo OCOREN
+            Selecione o arquivo OCOREN 
           </label>
           <div className="ocoren-parser-file-input-wrapper">
             <label className="ocoren-parser-file-input">
@@ -273,6 +337,7 @@ const OcorenParser = () => {
           </div>
         </div>
 
+        {/* Adicionado o operador de encadeamento opcional (?) para 'file' e verificação de 'file' antes de acessar 'name' */}
         {file && (
           <div className="ocoren-parser-selected-file">
             <div className="ocoren-parser-selected-file-content">
@@ -300,6 +365,7 @@ const OcorenParser = () => {
           </div>
         )}
 
+        {/* Adicionado o operador de encadeamento opcional (?) para 'parsedData' e verificação de 'parsedData' antes de acessar 'length' e 'map' */}
         {parsedData && (
           <div className="ocoren-parser-parsed-data-section">
             <div className="ocoren-parser-parsed-data-header">
@@ -318,13 +384,14 @@ const OcorenParser = () => {
                   
                   <div className="ocoren-parser-record-details-grid">
                     {Object.entries(record).map(([key, value]) => {
-                      if (key === 'type') return null;
+                      if (key === 'type') return null; // 'type' é o tipo do registro, não uma propriedade para exibir aqui
                       
                       let displayValue = value;
-                      if (key === 'dataOcorrencia') {
-                        displayValue = formatDate(value as string);
-                      } else if (key === 'horaOcorrencia') {
-                        displayValue = formatTime(value as string);
+                      // Condicionalmente aplicar formatação se as chaves existirem e os valores forem strings
+                      if (key === 'dataOcorrencia' && typeof value === 'string') {
+                        displayValue = formatDate(value);
+                      } else if (key === 'horaOcorrencia' && typeof value === 'string') {
+                        displayValue = formatTime(value);
                       }
 
                       return (
@@ -332,8 +399,9 @@ const OcorenParser = () => {
                           <div className="ocoren-parser-record-detail-key">
                             {key.replace(/([A-Z])/g, ' $1').trim()}
                           </div>
+                          {/* Converter displayValue para string para ReactNode */}
                           <div className="ocoren-parser-record-detail-value">
-                            {displayValue || '-'}
+                            {String(displayValue) || '-'}
                           </div>
                         </div>
                       );
