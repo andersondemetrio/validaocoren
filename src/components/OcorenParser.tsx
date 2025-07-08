@@ -247,7 +247,7 @@ const OcorenParser = () => {
               linha: line
             });
         }
-      } catch (err: unknown) {
+      } catch (err: any) {
         parsedRecords.push({
           type: 'Erro ao processar',
           identificador: recordType,
@@ -272,7 +272,7 @@ const OcorenParser = () => {
       const content = await uploadedFile.text();
       const parsed = parseOcorenFile(content);
       setParsedData(parsed);
-    } catch (err: unknown) {
+    } catch (err: any) {
       setError('Erro ao processar arquivo: ' + err.message);
     } finally {
       setLoading(false);
@@ -311,12 +311,12 @@ const OcorenParser = () => {
       <div className="ocoren-parser-content">
         <div className="ocoren-parser-header">
           <FileText className="ocoren-parser-icon" />
-          <h1 className="ocoren-parser-title">Validaro Intelipost de Arquivos OCOREN</h1>
+          <h1 className="ocoren-parser-title">Parser de Arquivos OCOREN</h1>
         </div>
 
         <div className="ocoren-parser-upload-section">
           <label className="ocoren-parser-label">
-            Selecione o arquivo OCOREN 
+            Selecione o arquivo OCOREN (.txt)
           </label>
           <div className="ocoren-parser-file-input-wrapper">
             <label className="ocoren-parser-file-input">
